@@ -1,7 +1,7 @@
 use prisma_client_rust::{and, not, or, Direction};
 
 use crate::{
-    db::{post, profile, user},
+    db::{post, profile, user, _prisma::QueryMode},
     utils::*,
 };
 
@@ -356,6 +356,37 @@ async fn list_wrapper_query_transformation() -> TestResult {
         .await?
         .unwrap();
     assert_eq!(user.name, "40 brendan");
+
+    cleanup(client).await
+}
+
+
+
+#[tokio::test]
+async fn find_first_case_insensitive() -> TestResult {
+    let client = client().await;
+
+    let post =
+        client
+            .post()
+            .create(
+                "Test post 1".to_string(),
+                true,
+                vec![post::views::set(100)],
+            )
+            .exec()
+            .await?;
+
+
+    let postr = client
+        .post()
+        .find_first(vec![post::title::equals("test post 1".to_string()),post::title::mode(QueryMode::Insensitive)])
+        .exec()
+        .await?
+        .unwrap();
+    assert_eq!(post.id, postr.id);
+    assert_eq!(post.title, "Test post 4");
+    assert!(post.published);
 
     cleanup(client).await
 }
